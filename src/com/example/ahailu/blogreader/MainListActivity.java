@@ -8,6 +8,9 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import android.app.ListActivity;
 import android.content.Context;
 import android.net.ConnectivityManager;
@@ -85,12 +88,20 @@ public class MainListActivity extends ListActivity {
 					// An InputStream is data stored as bytes.
 					Reader reader = new InputStreamReader(inputStream);
 					// Reader reads the data from the InputStream as we know that we are dealing with strings
-					int contentLength = connection.getContentLength(); 
+					char[] charArray = new char[connection.getContentLength()];
 					// Connection knows how many chars we're dealing with
-					char[] charArray = new char[contentLength];
 					reader.read(charArray); // Store data in our char array. The read method changes the data in char
 					String responseData = new String(charArray); // Convert charArray to strings
-					Log.v(TAG, responseData); // Write this data to the log (JSON)
+					JSONObject jsonResponse = new JSONObject(responseData);
+					String status = jsonResponse.getString("status");
+					Log.v(TAG, status);
+					
+					JSONArray jsonPosts = jsonResponse.getJSONArray("posts");
+					for(int i = 0; i < jsonPosts.length(); i++){
+					// Loops through JSON code and logs each post title
+						JSONObject jsonPost = jsonPosts.getJSONObject(i);
+						Log.v(TAG, "Post " + i + ": " + jsonPost.getString("title"));
+					}
 				}
 				else{
 					Log.i(TAG, "Unsuccessful HTTP Response Code: " + responseCode);
