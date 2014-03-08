@@ -19,5 +19,7 @@
         <item>Ice Cream Sandwhich</item>
         <item>Jelly Bean</item>
     </string-array>
+    <string name="error_title">Oops! Sorry!</string>
+    <string name="error_message">There was an error getting data from the blog.</string>
 
 </resources>

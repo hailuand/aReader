@@ -9,16 +9,20 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 public class MainListActivity extends ListActivity {
@@ -26,6 +30,7 @@ public class MainListActivity extends ListActivity {
 	protected String[] mBlogPostTitles;
 	public static final int NUMBER_OF_POSTS = 20;
 	public static final String TAG = MainListActivity.class.getSimpleName();
+	protected JSONObject mBlogData;
 	
 
 	@Override
@@ -69,13 +74,43 @@ public class MainListActivity extends ListActivity {
 		return true;
 	}
 
-	private class getBlogPostsTask extends AsyncTask<Object, Void, String> {
+	public void updateList() {
+		if(mBlogData == null){
+		// Display dialogue
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle(getString(R.string.error_title));
+			builder.setMessage(getString(R.string.error_message));
+			builder.setPositiveButton(android.R.string.ok, null);
+			AlertDialog dialog = builder.create();
+			dialog.show();
+		}
+		else{
+			try {
+				JSONArray jsonPosts = mBlogData.getJSONArray("posts");
+				mBlogPostTitles = new String[jsonPosts.length()];
+				for(int i = 0; i < jsonPosts.length(); i++){
+					JSONObject post = jsonPosts.getJSONObject(i);
+					String title = post.getString("title");
+					title = Html.fromHtml(title).toString();;
+					mBlogPostTitles[i] = title;
+				}
+				ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,
+						mBlogPostTitles);
+				setListAdapter(adapter);
+			} catch (JSONException e) {
+				Log.e(TAG, "Exception caught!", e);
+			}
+		}
+	}
+	
+	private class getBlogPostsTask extends AsyncTask<Object, Void, JSONObject> {
 	// Connects to URL and retrieves data from it
 	// An AsyncTasks does work in parallel with the main UI thread, so that the UI remains responsive to user
 	// interface actions, and doesn't stop everything to do one task
 		int responseCode = -1;
+		JSONObject jsonResponse = null;
 		@Override
-		protected String doInBackground(Object... arg0) {
+		protected JSONObject doInBackground(Object... arg0) {
 			try{
 				URL blogFeedUrl = new URL("http://blog.teamtreehouse.com/api/get_recent_summary/?count=" + 
 			NUMBER_OF_POSTS);
@@ -92,16 +127,7 @@ public class MainListActivity extends ListActivity {
 					// Connection knows how many chars we're dealing with
 					reader.read(charArray); // Store data in our char array. The read method changes the data in char
 					String responseData = new String(charArray); // Convert charArray to strings
-					JSONObject jsonResponse = new JSONObject(responseData);
-					String status = jsonResponse.getString("status");
-					Log.v(TAG, status);
-					
-					JSONArray jsonPosts = jsonResponse.getJSONArray("posts");
-					for(int i = 0; i < jsonPosts.length(); i++){
-					// Loops through JSON code and logs each post title
-						JSONObject jsonPost = jsonPosts.getJSONObject(i);
-						Log.v(TAG, "Post " + i + ": " + jsonPost.getString("title"));
-					}
+					jsonResponse = new JSONObject(responseData);
 				}
 				else{
 					Log.i(TAG, "Unsuccessful HTTP Response Code: " + responseCode);
@@ -117,7 +143,12 @@ public class MainListActivity extends ListActivity {
 			catch(Exception e){
 				Log.e(TAG, "Exception caught: ", e);
 			}
-			return "Code :" + responseCode;
+			return jsonResponse;
+		}
+		@Override
+		protected void onPostExecute(JSONObject result) {
+			mBlogData = result;
+			updateList();
 		}
 		
 	}
